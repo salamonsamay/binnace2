@@ -15,7 +15,7 @@ public class TriangleArbitrage {
     static String coin_="USDT";
     static String path="";
     static String steps="";
-    static  String order[][]=new String[3][6];
+    static  String order[][]=new String[3][7];
     private  List<Balance> balanceList;
     private final StorageUpdatedPair storUpdetedPair;
     private final SpotClient spotClient;
@@ -68,12 +68,15 @@ public class TriangleArbitrage {
 
                     if (isValidArbitrage(ticker1, ticker2, ticker3)) {
                         double result=   calculate(ticker1.getSymbol(),ticker2.getSymbol(),ticker3.getSymbol(),coin_,50);
-                        if( result>55){
+                        if( result>51){
                             System.out.println(result);
+                            System.out.println(path);
+                            System.out.println(steps);
+                            placeOrdersWithRetry(ticker1, ticker2, ticker3);
                         }
-                        System.out.println(path);
-                        System.out.println(steps);
-                        placeOrdersWithRetry(ticker1, ticker2, ticker3);
+
+
+
                     }
                 }
             }
@@ -85,23 +88,49 @@ public class TriangleArbitrage {
 
 //            String orderId = placeOrder(ticker.getSymbol(), "BUY", "LIMIT", "GTC", 10, Double.parseDouble(ticker.getAskPrice()));
 
-
-        String orderId = placeOrder(order[0][0], order[0][1], order[0][2], order[0][3], Double.parseDouble(order[0][4]), Double.parseDouble(order[0][5]));
-        while (isOrderFilled(orderId.split(",")[0], orderId.split(",")[1])) {
+        String orderId = placeOrder(order[0][0], order[0][1], order[0][2], order[0][3], Double.parseDouble(order[0][4]), Double.parseDouble(order[0][5]),order[0][6]);
+        System.out.println(orderId);
+        while (!isOrderFilled(order[0][0])) {
+            System.out.println("wait until order "+1+" is filled");
+            System.out.println();
             sleep(2000);
         }
-        orderId = placeOrder(order[1][0], order[1][1], order[1][2], order[1][3], Double.parseDouble(order[1][4]), Double.parseDouble(order[1][5]));
-        while (isOrderFilled(orderId.split(",")[0], orderId.split(",")[1])) {
+        orderId = placeOrder(order[1][0], order[1][1], order[1][2], order[1][3], Double.parseDouble(order[1][4]), Double.parseDouble(order[1][5]),order[1][6]);
+        while (!isOrderFilled(order[1][0])) {
+            System.out.println("wait until order "+2+" is filled");
+            System.out.println();
             sleep(2000);
         }
-        orderId = placeOrder(order[2][0], order[2][1], order[2][2], order[2][3], Double.parseDouble(order[2][4]), Double.parseDouble(order[2][5]));
-        while (isOrderFilled(orderId.split(",")[0], orderId.split(",")[1])) {
+        orderId = placeOrder(order[2][0], order[2][1], order[2][2], order[2][3], Double.parseDouble(order[2][4]), Double.parseDouble(order[2][5]),order[2][6]);
+        while (!isOrderFilled(order[2][0])) {
+            System.out.println("wait until order "+3+" is filled");
+            System.out.println();
             sleep(2000);
         }
 
     }
 
-    private String placeOrder(String symbol, String side, String type, String timeInForce, double quantity, double price) {
+    private String placeOrder(String symbol, String side, String type, String timeInForce, double quantity, double price,String coin) {
+        init();
+        String b = null;
+       for(Balance balance:balanceList){
+           if(balance.getAsset().equals(coin.toUpperCase())){
+               b=balance.getFree();
+           }
+       }
+       String newBalance="";
+       String str_quantity=quantity+"";
+       for(int i=0;i<str_quantity.length();i++){
+           newBalance+=b.charAt(i)+"";
+       }
+
+        System.out.println(symbol);
+        System.out.println(side);
+        System.out.println(type);
+        System.out.println(timeInForce);
+        System.out.println(newBalance);
+        System.out.println(price);
+        System.out.println("------------");
         Map<String, Object> parameters = createOrderParameters(symbol, side, type, timeInForce, quantity, price);
         String result = spotClient.createTrade().newOrder(parameters);
         return extractOrderId(result);
@@ -118,10 +147,18 @@ public class TriangleArbitrage {
         return parameters;
     }
 
-    private boolean isOrderFilled(String symbol, String orderId) {
-        Map<String, Object> parameters = createOrderParameters(symbol, orderId, "SELL", "LIMIT", 10, 0.0);
-        String result = spotClient.createTrade().getOrder(parameters);
-        return "filled".equals(extractOrderStatus(result));
+    private boolean isOrderFilled(String symbol) {
+        LinkedHashMap<String, Object> parameters = new LinkedHashMap<>();
+
+        SpotClientImpl client = new SpotClientImpl(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY, PrivateConfig.BASE_URL);
+        parameters.put("symbol",symbol);
+        String result=client.createTrade().getOrders(parameters);
+        JSONArray jsonArray = new JSONArray(result);
+
+        JSONObject lastObject = jsonArray.getJSONObject(jsonArray.length() - 1);
+//        System.out.println(lastObject.getString("time"));
+//        System.out.println(lastObject.getString("status"));
+        return "FILLED".equals(lastObject.getString("status"));
     }
 
     private String extractOrderId(String result) {
@@ -220,7 +257,6 @@ public class TriangleArbitrage {
         TriangleArbitrage triangleArbitrage = new TriangleArbitrage(storUpdetedPair);
 
 
-
         try {
             Thread.sleep(4000);
         } catch (InterruptedException e) {
@@ -228,11 +264,11 @@ public class TriangleArbitrage {
         }
 //        triangleArbitrage.balanceList.stream()
 //                .filter(b -> Double.parseDouble(b.getFree())>0).forEach(System.out::println);
-
+        storUpdetedPair.update();
 
         while (true) {
             // Update ticker data
-            storUpdetedPair.update();
+
 
             // Find and print arbitrage opportunities
             triangleArbitrage.findArbitrageOpportunitiesAndPlaceOrders();
@@ -241,25 +277,26 @@ public class TriangleArbitrage {
     }
 
     public  double calculate(String pair1,String pair2,String pair3,String coin,double invest){
+        newcounter=0;
         return calculate(parseSymbol(pair1),parseSymbol(pair2),parseSymbol(pair3),coin,coin,invest,3);
     }
 
+    static int newcounter=0;
 
     //change quantity size in sell area my order array
     private   double calculate(String symbol1[] ,String symbol2[],String symbol3[],String coin,String last_coin,double invest,int counter){
         if(counter==0){
             return invest;
         }
-        System.out.println(counter);
         if(symbol1[0].equals(coin) && !symbol1[1].equals(last_coin)){
             PairData pair1=StorageUpdatedPair.get(symbol1[0]+symbol1[1]);
 
             double x=invest*Double.parseDouble(pair1.getBidPrice());
             path+=coin+" --SELL-> "+symbol1[1]+"\n";
-            steps+="SELL "+invest+" "+coin+" at price "+pair1.getBidPrice()+" and get "+x+" "+symbol1[1]+"\n";
-//            double shortBy=ExtractStepSize.extract(pair1.getSymbol());
-            String[] ord={pair1.getSymbol(),"SELL","LIMIT","GTC",invest+"",pair1.getBidPrice()} ;
-            order[counter-1]=ord;
+            steps+="A) SELL "+invest+" "+coin+" at price "+pair1.getBidPrice()+" and get "+x+" "+symbol1[1]+"\n";
+            int shortBy=ExtractStepSize.countDiggitAfterDot(pair1.getSymbol());
+            String[] ord={pair1.getSymbol(),"SELL","LIMIT","GTC",ExtractStepSize.prefix(invest,shortBy)+"",pair1.getBidPrice(),coin} ;
+            order[newcounter++]=ord;
             return calculate(symbol1,symbol2,symbol3,symbol1[1],coin,x,--counter);
         }
 
@@ -268,9 +305,10 @@ public class TriangleArbitrage {
             double x=invest*Double.parseDouble(pair2.getBidPrice());
 
             path+=coin+" --SELL-> "+symbol2[1]+"\n";
-            steps+="SELL "+invest+" "+coin+" at price "+pair2.getBidPrice()+" and get "+x+" "+symbol2[1]+"\n";
-            String[] ord={pair2.getSymbol(),"SELL","LIMIT","GTC",invest+"", pair2.getBidPrice()} ;
-            order[counter-1]=ord;
+            steps+="B) SELL "+invest+" "+coin+" at price "+pair2.getBidPrice()+" and get "+x+" "+symbol2[1]+"\n";
+            int shortBy=ExtractStepSize.countDiggitAfterDot(pair2.getSymbol());
+            String[] ord={pair2.getSymbol(),"SELL","LIMIT","GTC",ExtractStepSize.prefix(invest,shortBy)+"", pair2.getBidPrice(),coin} ;
+            order[newcounter++]=ord;
             return calculate(symbol1,symbol2,symbol3,symbol2[1],coin,x,--counter);
         }
 
@@ -279,9 +317,11 @@ public class TriangleArbitrage {
             double x=invest/Double.parseDouble(pair1.getAskPrice());
 
             path+=coin+"--BUY-> "+symbol1[0]+"\n";
-            steps+="BUY "+x+" "+symbol1[0]+" at price "+pair1.getAskPrice()+" with "+invest+" "+coin+"\n";
-            String[] ord={pair1.getSymbol(),"BUY","LIMIT","GTC",x+"",pair1.getAskPrice()} ;
-            order[counter-1]=ord;
+            steps+="C) BUY "+x+" "+symbol1[0]+" at price "+pair1.getAskPrice()+" with "+invest+" "+coin+"\n";
+            int shortBy=ExtractStepSize.countDiggitAfterDot(pair1.getSymbol());
+
+            String[] ord={pair1.getSymbol(),"BUY","LIMIT","GTC",ExtractStepSize.prefix(x,shortBy)+"",pair1.getAskPrice(),symbol1[0]} ;
+            order[newcounter++]=ord;
             return calculate(symbol1,symbol2,symbol3,symbol1[0],coin,x,--counter);
         }
 
@@ -289,9 +329,11 @@ public class TriangleArbitrage {
             PairData pair2=StorageUpdatedPair.get(symbol2[0]+symbol2[1]);
             double x=invest/Double.parseDouble(pair2.getAskPrice());
             path+=coin+" --BUY-> "+symbol2[0]+"\n";
-            steps+="BUY "+x+" "+symbol2[0]+" at price "+pair2.getAskPrice()+" with "+invest+" "+coin+"\n";
-            String[] ord={pair2.getSymbol(),"BUY","LIMIT","GTC",x+"",pair2.getAskPrice()} ;
-            order[counter-1]=ord;
+            steps+="D) BUY "+x+" "+symbol2[0]+" at price "+pair2.getAskPrice()+" with "+invest+" "+coin+"\n";
+            int shortBy=ExtractStepSize.countDiggitAfterDot(pair2.getSymbol());
+
+            String[] ord={pair2.getSymbol(),"BUY","LIMIT","GTC",ExtractStepSize.prefix(x,shortBy)+"",pair2.getAskPrice(),symbol2[0]} ;
+            order[newcounter++]=ord;
             return calculate(symbol1,symbol2,symbol3,symbol2[0],coin,x,--counter);
         }
 
@@ -299,9 +341,10 @@ public class TriangleArbitrage {
             PairData pair3=StorageUpdatedPair.get(symbol3[0]+symbol3[1]);
             double x=invest*Double.parseDouble(pair3.getAskPrice());
             path+=coin+"--SELL-> "+symbol3[1]+"\n";
-            steps+="SELL  "+invest+" "+coin+" at price "+pair3.getBidPrice()+" and get "+x+" "+symbol3[1]+"\n";
-            String[] ord={pair3.getSymbol(),"SELL","LIMIT","GTC",invest+"",pair3.getBidPrice()} ;
-            order[counter-1]=ord;
+            steps+="E) SELL  "+invest+" "+coin+" at price "+pair3.getBidPrice()+" and get "+x+" "+symbol3[1]+"\n";
+            int shortBy=ExtractStepSize.countDiggitAfterDot(pair3.getSymbol());
+            String[] ord={pair3.getSymbol(),"SELL","LIMIT","GTC",ExtractStepSize.prefix(invest,shortBy)+"",pair3.getBidPrice(),coin} ;
+            order[newcounter++]=ord;
             return calculate(symbol1,symbol2,symbol3,symbol3[1],coin,x,--counter);
         }
 
@@ -310,9 +353,10 @@ public class TriangleArbitrage {
             double x=invest/Double.parseDouble(pair3.getAskPrice());
 
             path+=coin+" --BUY-> "+symbol3[0]+"\n";
-            steps+="BUY "+x+" "+symbol3[0]+" at price "+pair3.getAskPrice()+" with "+invest+" "+coin+"\n";
-            String[] ord={pair3.getSymbol(),"BUY","LIMIT","GTC",x+"",pair3.getAskPrice()} ;
-            order[counter-1]=ord;
+            steps+="F) BUY "+x+" "+symbol3[0]+" at price "+pair3.getAskPrice()+" with "+invest+" "+coin+"\n";
+            int shortBy=ExtractStepSize.countDiggitAfterDot(pair3.getSymbol());
+            String[] ord={pair3.getSymbol(),"BUY","LIMIT","GTC",ExtractStepSize.prefix(x,shortBy)+"",pair3.getAskPrice(),symbol3[0]} ;
+            order[newcounter++]=ord;
             return calculate(symbol1,symbol2,symbol3,symbol3[0],coin,x,--counter);
         }
 

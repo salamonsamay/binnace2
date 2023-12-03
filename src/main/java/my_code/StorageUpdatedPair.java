@@ -24,6 +24,7 @@ public class StorageUpdatedPair {
                     if(pairDataList.contains(pairData)){
                         int index= pairDataList.indexOf(pairData);
                         pairDataList.set(index, pairData);
+
                     }
                     else{
                         pairDataList.add(pairData);
