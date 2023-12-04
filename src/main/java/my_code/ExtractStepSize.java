@@ -48,6 +48,7 @@ public class ExtractStepSize {
 
 
     public static double prefix(double quntity, int y) {
+
         if (y < 0) {
             throw new IllegalArgumentException("The number of digits to truncate must be non-negative.");
         }
@@ -66,7 +67,7 @@ public class ExtractStepSize {
                 return i;
             }
         }
-        return -1;
+        return 0;
     }
 
     public static void main(String[] args) {

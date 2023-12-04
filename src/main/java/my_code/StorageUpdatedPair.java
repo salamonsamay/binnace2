@@ -10,12 +10,28 @@ public class StorageUpdatedPair {
     public static List<PairData> pairDataList =new LinkedList<>();
 
     public void update() {
+
         ArrayList<String> streams = new ArrayList<>();
+
+        streams.add("bnbbtc");
         streams.add("btcusdt");
-        streams.add("bnbusdt");
         streams.add("ethbtc");
-        streams.add("ethusdt");
+        streams.add("bnbeth");
+        streams.add("iotxusdt");
         streams.add("slpusdt");
+        streams.add("solbnb");
+        streams.add("solbtc");
+        streams.add("solusdt");
+        streams.add("uniusdt");
+        streams.add("xrpbnb");
+        streams.add("xrpbtc");
+        streams.add("xrpeth");
+        streams.add("xrpusdt");
+        streams.add("bnbusdt");
+        streams.add("ethusdt");
+        streams.add("soleth");
+        streams.add("luncusdt");
+
 
         for(String value:streams){
             client.symbolTicker(value, ((event) -> {
