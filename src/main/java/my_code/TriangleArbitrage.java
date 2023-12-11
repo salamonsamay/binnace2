@@ -62,6 +62,7 @@ public class TriangleArbitrage {
     }
 
    static double max=0;
+   static double min=10000;
     public void findArbitrageOpportunitiesAndPlaceOrders() {
         for (PairData ticker1 : storUpdetedPair.pairDataList) {
             for (PairData ticker2 : storUpdetedPair.pairDataList) {
@@ -69,7 +70,8 @@ public class TriangleArbitrage {
 
                     if (isValidArbitrage(ticker1, ticker2, ticker3)) {
 
-                        double result=   calculate(ticker1.getSymbol(),ticker2.getSymbol(),ticker3.getSymbol(),coin_,50);
+
+                        double result=   calculate(ticker1.getSymbol(),ticker2.getSymbol(),ticker3.getSymbol(), getRandomElement(),50);
 
                         if( result>51){
                             System.out.println(result);
@@ -79,7 +81,15 @@ public class TriangleArbitrage {
                         }
                         if(max<result){
                             max=result;
-                            System.out.println("max is "+max);
+                            System.out.println("the maximum is "+max);
+                            System.out.println(steps);
+                            System.out.println();
+                        }
+                        if(min>result){
+                            min=result;
+                            System.out.println("the minimum is "+min);
+                            System.out.println(steps);
+                            System.out.println();
                         }
                     }
                 }
@@ -287,8 +297,41 @@ public class TriangleArbitrage {
         }
     }
 
+    public  String getRandomElement(){
+        ArrayList<String> streams = new ArrayList<>();
+        streams.add("BNB");
+        streams.add("BTC");
+        streams.add("USDT");
+        streams.add("ETH");
+        streams.add("IOTX");
+        streams.add("SLP");
+        streams.add("SOL");
+        streams.add("BNB");
+        streams.add("UNI");
+        streams.add("XRP");;
+        streams.add("LUNC");
+
+        String randomStream = getRandomElement(streams);
+
+        return randomStream;
+    }
+    private static String getRandomElement(ArrayList<String> list) {
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+
+        Random random = new Random();
+        int randomIndex = random.nextInt(list.size());
+
+        return list.get(randomIndex);
+
+    }
+
     public  double calculate(String pair1,String pair2,String pair3,String coin,double invest){
+
         newcounter=0;
+        path="";
+        steps="";
         return calculate(parseSymbol(pair1),parseSymbol(pair2),parseSymbol(pair3),coin,coin,invest,3);
     }
 
