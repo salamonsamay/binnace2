@@ -44,6 +44,8 @@ public class TriangleArbitrage {
 
                 Balance balance = new Balance(asset, free, locked);
                 balances.add(balance);
+                if(Double.parseDouble(balance.getFree())>0)
+                    System.out.println(balance);
             }
         }
 
@@ -61,8 +63,17 @@ public class TriangleArbitrage {
         return new SpotClientImpl(PrivateConfig.API_KEY, PrivateConfig.SECRET_KEY, PrivateConfig.BASE_URL);
     }
 
-   static double max=0;
-   static double min=10000;
+    static double max=0;
+    static double min=10000;
+
+    private double getBalanceFree(String coin){
+        for(Balance b:balanceList){
+            if(b.getAsset().equals(coin)){
+                return Double.parseDouble(b.getFree());
+            }
+        }
+        return 3;
+    }
     public void findArbitrageOpportunitiesAndPlaceOrders() {
         for (PairData ticker1 : storUpdetedPair.pairDataList) {
             for (PairData ticker2 : storUpdetedPair.pairDataList) {
@@ -71,9 +82,9 @@ public class TriangleArbitrage {
                     if (isValidArbitrage(ticker1, ticker2, ticker3)) {
 
 
-                        double result=   calculate(ticker1.getSymbol(),ticker2.getSymbol(),ticker3.getSymbol(), getRandomElement(),50);
+                        double result=   calculate(ticker1.getSymbol(),ticker2.getSymbol(),ticker3.getSymbol(), coin_,getBalanceFree("USDT"));
 
-                        if( result>51){
+                        if( result>getBalanceFree("USDT")*1.006){
                             System.out.println(result);
                             System.out.println(path);
                             System.out.println(steps);
@@ -127,16 +138,18 @@ public class TriangleArbitrage {
     private String placeOrder(String symbol, String side, String type, String timeInForce, double quantity, double price,String coin) {
         init();
         String b = null;
-       for(Balance balance:balanceList){
-           if(balance.getAsset().equals(coin.toUpperCase())){
-               b=balance.getFree();
-           }
-       }
-       String newBalance="";
-       String str_quantity=quantity+"";
-       for(int i=0;i<str_quantity.length();i++){
-           newBalance+=b.charAt(i)+"";
-       }
+        for(Balance balance:balanceList){
+            if(balance.getAsset().equals(coin.toUpperCase())){
+
+                b=balance.getFree();
+
+            }
+        }
+        String newBalance="";
+        String str_quantity=quantity+"";
+        for(int i=0;i<str_quantity.length();i++){
+            newBalance+=b.charAt(i)+"";
+        }
 
         System.out.println(symbol);
         System.out.println(side);
@@ -282,10 +295,10 @@ public class TriangleArbitrage {
 //                .filter(b -> Double.parseDouble(b.getFree())>0).forEach(System.out::println);
         storUpdetedPair.update();
 
-       while(StorageUpdatedPair.pairDataList.size()<18){
-           System.out.println(StorageUpdatedPair.pairDataList.size());
-           Thread.sleep(3000);
-       }
+        while(StorageUpdatedPair.pairDataList.size()<18){
+            System.out.println(StorageUpdatedPair.pairDataList.size());
+            Thread.sleep(3000);
+        }
 
         while (true) {
             // Update ticker data
